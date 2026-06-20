@@ -1,0 +1,61 @@
+# Environment
+.env
+venv
+.venv
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Data & Models (IMPORTANT - don't commit large files)
+data/
+datasets/
+*.wav
+*.mp3
+*.flac
+*.jpg
+*.png
+*.log
+
+# PyTorch Models & Checkpoints
+models/
+checkpoints/
+weights/
+*.pth
+*.pt
+runs/
+
+# Logs & Outputs
+logs/
+outputs/
+results/
+tensorboard_logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+.cache/
+*.tmp
+*.bak
