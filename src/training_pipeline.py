@@ -1,9 +1,14 @@
 
 from utils.training_logger import TrainingLogger
 from utils.create_datasets import prepare_dataloaders
+from utils.gpu_utils import select_gpu
 from dynamic_dataset_class import DynamicKeywordDataset
 from torch.utils.data import DataLoader
-import os 
+import os
+import sys
+from training_loop import train_model
+from models import KeywordSpottingCNN
+
 
 # ==========================================
 # Initialization
@@ -38,23 +43,14 @@ if __name__ == "__main__":
     full_data_list=data_list, 
     noise_dir=os.path.join(dataset_path, noise_path),
     class_mapping=class_mapping,  # Pass your class_mapping here
-    batch_size=4, 
+    batch_size=64, 
     val_split=0.1,
     plot_distribution_per_class=False,  # Enable plotting
     pin_memory=False
 )
-    # test train loader 
-    print("==== train ====\n")
-    train_loader = iter(train_loader)
-    waveform, label = next(train_loader)
-    print("tensor", waveform)
-    print("label", label)
-    print("tensor shape", waveform.shape)
+    
+    device = select_gpu()
+    model = KeywordSpottingCNN().to(device)
+    
 
-    print("==== val ====\n")
-    # test val loader 
-    val_loader = iter(val_loader)
-    waveform, label = next(val_loader)
-    print("tensor", waveform)
-    print("label", label)
-    print("tensor shape", waveform.shape)
+    trained_model = train_model(model, train_loader, val_loader, num_epochs=200, device = device)
