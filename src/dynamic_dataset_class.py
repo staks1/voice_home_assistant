@@ -30,11 +30,20 @@ class DynamicKeywordDataset(Dataset):
         
         # Initialize MelSpectrogram transformer
         # TODO : check what values we need to use in the transformation
+        # self.mel_transform = T.MelSpectrogram(
+        #     sample_rate=sample_rate,
+        #     n_mels=64,
+        #     n_fft=1024,
+        #     hop_length=512
+        # )
+
+
         self.mel_transform = T.MelSpectrogram(
             sample_rate=sample_rate,
             n_mels=64,
-            n_fft=1024,
-            hop_length=512
+            n_fft=512,
+            # win_length=512 is applied implicitly when omitted
+            hop_length=160 # 69% overlap - 10ms step size for 16000 sample rate # or 256 for 50% overlap, we start with more detailed overlap 
         )
 
     def __len__(self):
@@ -120,16 +129,27 @@ class DynamicKeywordDataset(Dataset):
         label = torch.tensor(label, dtype=torch.long)
         
 
-        return waveform,label
+        #return waveform,label
 
         ## 4. Convert to Mel-Spectrogram 
         ## Final shape: [1, 64, ~94] (Channels, Mels, TimeFrames)
-        #mel_spec = self.mel_transform(waveform)
+        mel_spec = self.mel_transform(waveform)
         
         # Convert to Decibels for better numerical stability
-        #mel_spec_db = T.AmplitudeToDB(stype='power', top_db=80)(mel_spec)
-        
-        #return mel_spec_db, label
+        mel_spec_db = T.AmplitudeToDB(stype='power', top_db=80)(mel_spec)
+
+        # add normalization 
+        # 2. Calculate the mean and standard deviation of this specific spectrogram
+        mean = mel_spec_db.mean()
+        std = mel_spec_db.std()
+
+        # 3. Apply Z-score normalization (avoiding division by zero)
+        if std > 1e-6:
+            mel_spec_normalized = (mel_spec_db - mean) / std
+        else:
+            mel_spec_normalized = mel_spec_db - mean
+                
+        return mel_spec_normalized, label
 
 # ==========================================
 # Example Initialization
