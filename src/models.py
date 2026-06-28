@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+from torchvision.models import mobilenet_v2
+from torchvision import models
 
 class KeywordSpottingCNN(nn.Module):
     def __init__(self, num_classes=13):
@@ -52,3 +54,42 @@ class KeywordSpottingCNN(nn.Module):
         logits = self.classifier(x)
         
         return logits
+
+
+
+class MobileNetV2Custom(nn.Module):
+
+    def __init__(self,num_classes = 13,pretrained=True,freeze_base=True):
+
+        super().__init__()
+
+        # the mobilenet backbone is {all layers except the final MLP classifier}
+        # 1280 -> num_classes
+        self.backbone = models.mobilenet_v2(weights='DEFAULT' if pretrained else None)
+
+        # change final classifier matrix to match our 13 classes
+        in_features = self.backbone.classifier[1].in_features
+        self.backbone.classifier[1] = nn.Linear(in_features, num_classes)
+
+
+        # Unfreeze only classifier
+        if freeze_base :
+            for param in self.backbone.classifier.parameters():
+                param.requires_grad = True
+
+            # Freeze only features
+            for param in self.backbone.features.parameters():
+                param.requires_grad = False
+
+    def forward(self, x):
+        # Expected input shape from your dataset: [Batch, 1, 64, Time]
+        
+        # The Input Hack: Duplicate the single grayscale channel 3 times.
+        # .repeat(batch_multiplier, channel_multiplier, height_multiplier, width_multiplier)
+        x = x.repeat(1, 3, 1, 1) 
+        # Shape is now mathematically identical to an RGB image: [Batch, 3, 64, Time]
+        
+        # Pass through the modified network
+        logits = self.backbone(x)
+        return logits 
+                
