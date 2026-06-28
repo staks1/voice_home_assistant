@@ -13,7 +13,7 @@ from utils.training_logger import TrainingLogger
 model_path = "/home/st1/Documents/training_cnn_for_waveform/models"
 plots_path = "/home/st1/Documents/training_cnn_for_waveform/plots"
 
-def train_model(model, train_loader, val_loader, num_epochs=2, device='cuda:0', save_path=os.path.join(model_path,'best_keyword_model.pth')):
+def train_model(model, train_loader, val_loader,lr, step_size,num_epochs=2, device='cuda:0', save_path=os.path.join(model_path,'best_keyword_model.pth')):
     # Initialize the logger
     logger = TrainingLogger()
     
@@ -23,11 +23,23 @@ def train_model(model, train_loader, val_loader, num_epochs=2, device='cuda:0', 
     
     # 1e-3 is the standard starting LR for Adam on fresh weights.
     # weight_decay=1e-4 adds L2 regularization to fight overfitting on your small dataset.
-    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-4)
+    
+    trainable_params = filter(lambda p: p.requires_grad, model.parameters())
+    # phase 1 #------------------
+    #optimizer = optim.Adam(trainable_params, lr=0.001, weight_decay=1e-4)
+
     
     # Reduces the learning rate by 50% every 20 epochs to help the model settle into the minimum
-    scheduler = StepLR(optimizer, step_size=20, gamma=0.5)
+    #scheduler = StepLR(optimizer, step_size=20, gamma=0.5)
+    #----------------------------
+    # phase2 
+    # CRITICAL: Microscopic learning rate to protect the pretrained MobileNet filters
+    optimizer = optim.Adam(trainable_params, lr=lr, weight_decay=1e-4)
 
+    # A much slower scheduler (or you can safely comment this line out for Phase 2)
+    scheduler = StepLR(optimizer, step_size=step_size, gamma=0.5)
+
+    
     model = model.to(device)
     
     # Track the highest validation accuracy achieved across all epochs
@@ -100,6 +112,7 @@ def train_model(model, train_loader, val_loader, num_epochs=2, device='cuda:0', 
             val_acc=epoch_val_acc
         )
         
+        print(f"Epoch Validation Loss {epoch_val_loss:.3f}\n")
         # Save the best model based on validation accuracy
         if epoch_val_acc > best_val_acc:
             best_val_acc = epoch_val_acc
@@ -110,7 +123,9 @@ def train_model(model, train_loader, val_loader, num_epochs=2, device='cuda:0', 
         run_gpu_monitor()
 
     print("Training Complete.")
+    run_gpu_monitor()
 
     # NEW: Trigger the plot rendering after the loop finishes
     logger.plot_metrics(save_path=os.path.join(plots_path,'training_curves.png'))
+    
     return model
