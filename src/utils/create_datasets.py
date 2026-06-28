@@ -5,6 +5,10 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import os
 from dynamic_dataset_class import DynamicKeywordDataset
+import torch
+from torch.utils.data import DataLoader, WeightedRandomSampler
+from sklearn.model_selection import train_test_split
+from collections import Counter
 
 
 def prepare_dataloaders(full_data_list, noise_dir, class_mapping, batch_size=64, val_split=0.1, plot_distribution_per_class=False,pin_memory=True):
@@ -98,10 +102,80 @@ def prepare_dataloaders(full_data_list, noise_dir, class_mapping, batch_size=64,
     )
 
     # 4. Create DataLoaders
+
     train_loader = DataLoader(
         train_dataset, 
         batch_size=batch_size, 
         shuffle=True, 
+        num_workers=4, 
+        pin_memory=pin_memory
+    )
+    
+    val_loader = DataLoader(
+        val_dataset, 
+        batch_size=batch_size, 
+        shuffle=False, 
+        num_workers=4, 
+        pin_memory=pin_memory
+    )
+    
+    return train_loader, val_loader
+
+
+
+
+
+
+
+def prepare_dataloaders_with_google_speech(full_data_list, noise_dir, batch_size=32, val_split=0.1,pin_memory=True):
+    
+    # 1. Extract labels for stratification
+    labels = [item[1] for item in full_data_list]
+    
+    # 2. Perform the Stratified Split
+    train_list, val_list = train_test_split(
+        full_data_list, 
+        test_size=val_split, 
+        stratify=labels, 
+        random_state=42
+    )
+    
+    # 3. Calculate Weights to prevent Class Imbalance Collapse
+    train_labels = [item[1] for item in train_list]
+    class_counts = Counter(train_labels)
+    total_train_samples = len(train_labels)
+    
+    print("\n--- Training Class Distribution Before Weighting ---")
+    for cls, count in sorted(class_counts.items()):
+        print(f"Class {cls}: {count} samples")
+        
+    # Weight formula: total_samples / class_count
+    # Rare classes get massive weights, common classes get tiny weights
+    class_weights = {cls: total_train_samples / count for cls, count in class_counts.items()}
+    
+    # Assign the calculated weight to every individual sample in the training list
+    sample_weights = [class_weights[label] for label in train_labels]
+    print(f"Sample weights are {sample_weights}")
+    
+    # Initialize the PyTorch sampler
+    sampler = WeightedRandomSampler(
+        weights=sample_weights, 
+        num_samples=len(sample_weights), 
+        replacement=True
+    )
+
+    # 4. Instantiate the Datasets
+    train_dataset = DynamicKeywordDataset(data_list=train_list, noise_dir=noise_dir, is_training=True)
+    val_dataset = DynamicKeywordDataset(data_list=val_list, noise_dir=noise_dir, is_training=False)
+
+    # 5. Create DataLoaders
+    # CRITICAL: When using a custom sampler, shuffle MUST be False. 
+    # The sampler handles the randomization internally.
+    train_loader = DataLoader(
+        train_dataset, 
+        batch_size=batch_size, 
+        sampler=sampler, 
+        shuffle=False, 
         num_workers=4, 
         pin_memory=pin_memory
     )
