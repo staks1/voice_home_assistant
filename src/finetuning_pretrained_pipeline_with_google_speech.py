@@ -66,6 +66,11 @@ if __name__ == "__main__":
     
     device = select_gpu()
 
+
+    print("\n========================================")
+    print("PHASE 1: Fine-Tuning Classidier layers only")
+    print("========================================")
+
     # 5. CRITICAL: Update the model initialization to expect 14 classes instead of 13
     model_phase1 = MobileNetV2Custom(num_classes=14, freeze_base=True).to(device)
 
