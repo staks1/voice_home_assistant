@@ -1,0 +1,14 @@
+anoikse_fos_kanape: 0
+anoikse_fos_krevati: 1
+anoikse_fos_saloni: 2
+google_speech: 13
+kleise_fos_kanape: 3
+kleise_fos_krevati: 4
+kleise_fos_saloni: 5
+kleise_musiki: 6
+kleise_ola: 7
+noise: 8
+paikse_musiki: 9
+xamilose_fos_kanape: 10
+xamilose_fos_krevati: 11
+xamilose_fos_saloni: 12
