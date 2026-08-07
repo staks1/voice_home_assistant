@@ -2,8 +2,9 @@ import torch
 import torchaudio
 import torchaudio.transforms as T
 import torch.nn.functional as F
-import os 
-import time 
+import os
+import time
+import argparse
 
 from models import MobileNetV2Custom
 
@@ -20,6 +21,7 @@ class KeywordInferencer:
         
         # 1. Initialize the Model
         self.model = MobileNetV2Custom(num_classes=num_classes, freeze_base=False)
+        print(self.model)
         
         # 2. Load the highly-trained weights
         state_dict = torch.load(model_path, map_location=self.device, weights_only=True)
@@ -118,17 +120,26 @@ class KeywordInferencer:
 # Execution
 # ==========================================
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Keyword detection inference script')
+    parser.add_argument(
+        '--test_audio_file',
+        type=str,
+        default='/home/st1/Documents/training_cnn_for_waveform/data/future_possible_classes/kleise_ola_additionals/chunk_901.wav',
+        help='Path to the test audio file'
+    )
+    args = parser.parse_args()
+
     # Ensure this matches your Phase 2 saved model filename
     MODEL_PATH = '/home/st1/Documents/training_cnn_for_waveform/models/phase2_finetuned_best.pth'
     TARGET_DEVICE = 'cpu'
-    
+
     # Initialize the inferencer
     inferencer = KeywordInferencer(
-        model_path=MODEL_PATH, 
-        num_classes=14, 
+        model_path=MODEL_PATH,
+        num_classes=14,
         device=TARGET_DEVICE
     )
-    
+
     # Map your integer class IDs back to human-readable labels
     # Integers as keys, strings as values
     CLASS_MAP = {
@@ -147,9 +158,8 @@ if __name__ == "__main__":
         12: 'xamilose_fos_saloni',
         13: 'google_speech'
     }
-    
-    test_audio_file = "/home/st1/Documents/training_cnn_for_waveform/data/need_cleaning_or_slided_forward_chunks/chunk_050.wav"
-    
+
+    test_audio_file = args.test_audio_file
     if os.path.exists(test_audio_file):
         print(f"Analyzing {test_audio_file}...")
 
@@ -167,7 +177,7 @@ if __name__ == "__main__":
             # Filtering logic example for your final application
             if pred_id == 12 or pred_id == 13:
                 print("Action: IGNORED (Noise or Background Speech detected)")
-            elif conf < 0.70:
+            elif conf < 0.4:
                 print("Action: IGNORED (Confidence too low)")
             else:
                 print(f"Action: EXECUTING COMMAND for '{human_label}'")
